@@ -2,6 +2,7 @@
 using FluentValidation.AspNetCore;
 using Loan.Api.Middleware;
 using Loan.Application.Models;
+using Loan.Application.Models.UserModels;
 using Loan.Application.Repositories.Abstraction;
 using Loan.Application.Services.Abstraction;
 using Loan.Application.Services.Implementation;
@@ -41,7 +42,6 @@ builder.Services.AddDbContext<ApplicationDbContext>(opt =>
 var appSettingsSection = builder.Configuration.GetSection("AppSettings");
 builder.Services.Configure<AppSettings>(appSettingsSection);
 
-// ზემოთ რეგისტრირებული სეკრეტის მიხედვით ტოკენის აუთენთიკაციის კონფიგურაცია
 var appSettings = appSettingsSection.Get<AppSettings>();
 var key = Encoding.ASCII.GetBytes(appSettings.Secret);
 builder.Services.AddAuthentication(x =>
@@ -64,8 +64,11 @@ builder.Services.AddAuthentication(x =>
 
 // სერვისების და რეპოზიტორების რეგისტრაცია
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<ILoanService, LoanService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IRoleRepository, RoleRepository>();
+builder.Services.AddScoped<IUserRoleRepository, UserRoleRepository>();
+builder.Services.AddScoped<ILoanRepository, LoanRepository>();
 
 // FluentValidator -ის კონფიგურაცია
 builder.Services.AddValidatorsFromAssemblyContaining<UserLoginRequestValidator>();
@@ -93,12 +96,14 @@ app.UseSerilogRequestLogging();
 
 app.UseHttpsRedirection();
 
+app.UseRouting();
+
 // ექსფენშენის ლოგირების მიდლვეარი
 app.UseMiddleware<ExceptionLoggingMiddleware>();
 
 // ავტორიზაცია / აუთენთიკაციისთვის
-app.UseAuthorization();
 app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllers();
 

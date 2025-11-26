@@ -4,6 +4,7 @@ using Loan.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Loan.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class LoanDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251126192709_AddBlockUntil")]
+    partial class AddBlockUntil
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,47 +24,6 @@ namespace Loan.Persistence.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
-
-            modelBuilder.Entity("Loan.Domain.Entities.Loan", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<decimal>("Amount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime>("CreateDate")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETUTCDATE()");
-
-                    b.Property<string>("Currency")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
-
-                    b.Property<int>("DurationInMonths")
-                        .HasColumnType("int");
-
-                    b.Property<int>("LoanStatus")
-                        .HasColumnType("int");
-
-                    b.Property<int>("LoanType")
-                        .HasColumnType("int");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("Loans");
-                });
 
             modelBuilder.Entity("Loan.Domain.Entities.Role", b =>
                 {
@@ -174,17 +136,6 @@ namespace Loan.Persistence.Migrations
                         });
                 });
 
-            modelBuilder.Entity("Loan.Domain.Entities.Loan", b =>
-                {
-                    b.HasOne("Loan.Domain.Entities.User", "User")
-                        .WithMany("Loans")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("Loan.Domain.Entities.UserRole", b =>
                 {
                     b.HasOne("Loan.Domain.Entities.Role", "Role")
@@ -211,8 +162,6 @@ namespace Loan.Persistence.Migrations
 
             modelBuilder.Entity("Loan.Domain.Entities.User", b =>
                 {
-                    b.Navigation("Loans");
-
                     b.Navigation("UserRoles");
                 });
 #pragma warning restore 612, 618

@@ -17,6 +17,7 @@ namespace Loan.Persistence.Repositories.Implementation
         {
             user.Password = PasswordHasher.Hash(user.Password);
             await dbContext.Users.AddAsync(user, cancellationToken);
+            await dbContext.SaveChangesAsync(cancellationToken);
             return user.Id;
         }
 
@@ -50,10 +51,40 @@ namespace Loan.Persistence.Repositories.Implementation
 
             if (user == null)
             {
-                return;
+                throw new Exception("User not found");
             }
 
             dbContext.Users.Remove(user);
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        public async Task BlockUserByIdAsync(int id, int minutes, CancellationToken cancellationToken)
+        {
+            User user = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+
+            if (user == null)
+            {
+                throw new Exception("User not found");
+            }
+            user.IsBlocked = true;
+            user.BlockedUntil = DateTime.UtcNow.AddMinutes(minutes);
+
+            dbContext.Update(user);
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        public async Task UnBlockUserByIdAsync(int id, CancellationToken cancellationToken)
+        {
+            User user = await dbContext.Users.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+
+            if (user == null)
+            {
+                throw new Exception("User not found");
+            }
+            user.IsBlocked = false;
+            user.BlockedUntil = null;
+
+            dbContext.Update(user);
             await dbContext.SaveChangesAsync(cancellationToken);
         }
     }

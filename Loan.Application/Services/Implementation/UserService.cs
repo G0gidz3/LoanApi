@@ -1,11 +1,11 @@
 ﻿using Loan.Application.Models;
+using Loan.Application.Models.UserModels;
 using Loan.Application.Repositories.Abstraction;
 using Loan.Application.Services.Abstraction;
 using Loan.Domain.Entities;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
-using System.Reflection;
 using System.Security.Claims;
 using System.Text;
 
@@ -15,18 +15,33 @@ namespace Loan.Application.Services.Implementation
     {
         private readonly IUserRepository userRepository;
         private readonly IRoleRepository roleRepository;
+        private readonly IUserRoleRepository userRoleRepository;
         private readonly IOptions<AppSettings> appSettings;
 
-        public UserService(IUserRepository userRepository, IRoleRepository roleRepository, IOptions<AppSettings> appSettings)
+        public UserService(
+            IUserRepository userRepository,
+            IRoleRepository roleRepository,
+            IUserRoleRepository userRoleRepository,
+            IOptions<AppSettings> appSettings)
         {
             this.userRepository = userRepository;
             this.roleRepository = roleRepository;
+            this.userRoleRepository = userRoleRepository;
             this.appSettings = appSettings;
         }
+
+        public async Task BlockUserAsync(int id, int minutes, CancellationToken cancellationToken)
+        {
+            await userRepository.BlockUserByIdAsync(id, minutes, cancellationToken);
+        }
+
         public async Task<UserDetailResponse> GetUserDetailsAsync(int id, CancellationToken cancellationToken)
         {
-            var user = await userRepository.GetUserByIdAsync(id, cancellationToken);
-            var userDetailResponse = new UserDetailResponse()
+            User user = await userRepository.GetUserByIdAsync(id, cancellationToken);
+            if (user == null)
+                throw new Exception($"User with id [{id}] doesn't exists.");
+
+            UserDetailResponse userDetailResponse = new UserDetailResponse()
             {
                 Id = user.Id,
                 FirstName = user.FirstName,
@@ -42,9 +57,25 @@ namespace Loan.Application.Services.Implementation
             return userDetailResponse;
         }
 
-        public Task<List<UserDetailResponse>> GetUserListDetailsAsync(CancellationToken cancellationToken)
+        public async Task<List<UserDetailResponse>> GetUserListDetailsAsync(CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            List<User> users = await userRepository.GetUserlistAsync(cancellationToken);
+            if (users == null)
+                return new List<UserDetailResponse>();
+
+            List<UserDetailResponse> userList = users.Select(user => new UserDetailResponse()
+            {
+                Id = user.Id,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Age = user.Age,
+                Email = user.Email,
+                Username = user.Username,
+                IsBlocked = user.IsBlocked,
+                Salary = user.Salary,
+                Roles = user.UserRoles.Select(x => x.Role.RoleName).ToList()
+            }).ToList();
+            return userList;
         }
 
         public async Task<UserLoginResponse> LoginAsync(UserLoginRequest request, CancellationToken cancellationToken)
@@ -52,7 +83,7 @@ namespace Loan.Application.Services.Implementation
             User user = await userRepository.GetUserByUsernameAndPasswordAsync(request.Username, request.Password, cancellationToken);
 
             if (user == null)
-                return null;
+                throw new Exception("Wrong Credentials.");
 
             UserLoginResponse userLogin = new UserLoginResponse()
             {
@@ -89,7 +120,7 @@ namespace Loan.Application.Services.Implementation
                 if (role == null)
                 {
                     await userRepository.DeleteUserByIdAsync(userId, cancellationToken);
-                    throw new Exception($"Role with name {roleName} doesn't exists.");
+                    throw new Exception($"Role with name [{roleName}] doesn't exists.");
                 }
 
                 userRoles.Add(new UserRole()
@@ -98,6 +129,7 @@ namespace Loan.Application.Services.Implementation
                     RoleId = role.Id
                 });
             }
+            await userRoleRepository.CreateUserRolesAsync(userRoles, cancellationToken);
             return userId;
         }
 
@@ -108,27 +140,24 @@ namespace Loan.Application.Services.Implementation
 
             var claims = new List<Claim>
             {
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-                new Claim(ClaimTypes.Name, user.Username)
+                new Claim(ClaimTypes.Name, user.Id.ToString())
             };
 
-            // Add roles
-            foreach (var role in user.UserRoles.Select(r => r.Role.RoleName))
+            foreach (var userRole in user.UserRoles)
             {
-                claims.Add(new Claim(ClaimTypes.Role, role));
+                claims.Add(new Claim(ClaimTypes.Role, userRole.Role.RoleName));
             }
+
 
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(claims),
                 Expires = DateTime.UtcNow.AddDays(1),
-                SigningCredentials = new SigningCredentials(
-                    new SymmetricSecurityKey(key),
-                    SecurityAlgorithms.HmacSha256Signature)
+                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
             };
-
             var token = tokenHandler.CreateToken(tokenDescriptor);
-            return tokenHandler.WriteToken(token);
+            var tokenString = tokenHandler.WriteToken(token);
+            return tokenString;
         }
     }
 }

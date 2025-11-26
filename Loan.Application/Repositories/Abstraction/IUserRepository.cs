@@ -9,5 +9,7 @@ namespace Loan.Application.Repositories.Abstraction
         public Task<User> GetUserByUsernameAndPasswordAsync(string username, string password, CancellationToken cancellationToken);
         public Task<List<User>> GetUserlistAsync(CancellationToken cancellationToken);
         public Task DeleteUserByIdAsync(int id, CancellationToken cancellationToken);
+        public Task BlockUserByIdAsync(int id, int minutes, CancellationToken cancellationToken);
+        public Task UnBlockUserByIdAsync(int id, CancellationToken cancellationToken);
     }
 }

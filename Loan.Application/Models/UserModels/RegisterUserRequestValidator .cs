@@ -1,6 +1,6 @@
 ﻿using FluentValidation;
 
-namespace Loan.Application.Models
+namespace Loan.Application.Models.UserModels
 {
 
 

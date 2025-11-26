@@ -15,6 +15,7 @@ namespace Loan.Persistence
         public DbSet<User> Users { get; set; }
         public DbSet<Role> Roles { get; set; }
         public DbSet<UserRole> UserRoles { get; set; }
+        public DbSet<Domain.Entities.Loan> Loans { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -61,17 +62,26 @@ namespace Loan.Persistence
                 .Property(u => u.IsBlocked)
                 .HasDefaultValue(false);
 
-            // კონფიგურაცია Many-to-Many ურთიერთობისთვის User და Role შორის
+            // კონფიგურაცია Many-to-Many რელაციისთვის User და Role შორის
             modelBuilder.Entity<UserRole>()
                 .HasOne(ur => ur.User)
                 .WithMany(u => u.UserRoles)
                 .HasForeignKey(ur => ur.UserId);
 
-            // კონფიგურაცია Many-to-Many ურთიერთობისთვის Role და User შორის
+            // კონფიგურაცია Many-to-Many რელაციისთვის Role და User შორის
             modelBuilder.Entity<UserRole>()
                 .HasOne(ur => ur.Role)
                 .WithMany(r => r.UserRoles)
                 .HasForeignKey(ur => ur.RoleId);
+
+            // კონფიგურაცია One-to-Many რელაციისთვის User და Loan შორის
+            modelBuilder.Entity<User>()
+                .HasMany(u => u.Loans)
+                .WithOne(l => l.User)
+                .HasForeignKey(l => l.UserId);
+            modelBuilder.Entity<Domain.Entities.Loan>().Property(x => x.Amount).HasPrecision(18, 2).IsRequired();
+            modelBuilder.Entity<Domain.Entities.Loan>().Property(x => x.Currency).HasMaxLength(10).IsRequired();
+            modelBuilder.Entity<Domain.Entities.Loan>().Property(x => x.CreateDate).HasDefaultValueSql("GETUTCDATE()");
         }
     }
 }

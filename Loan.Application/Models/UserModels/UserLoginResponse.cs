@@ -1,4 +1,4 @@
-﻿namespace Loan.Application.Models
+﻿namespace Loan.Application.Models.UserModels
 {
     public class UserLoginResponse
     {
